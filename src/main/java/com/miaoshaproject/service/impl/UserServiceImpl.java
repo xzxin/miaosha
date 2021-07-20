@@ -8,6 +8,8 @@ import com.miaoshaproject.error.BussinessException;
 import com.miaoshaproject.error.EnumBussinessError;
 import com.miaoshaproject.service.UserService;
 import com.miaoshaproject.service.model.UserModel;
+import com.miaoshaproject.validator.ValidationResult;
+import com.miaoshaproject.validator.ValidatorImpl;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -17,6 +19,9 @@ import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class UserServiceImpl implements UserService {
+    @Autowired
+    private ValidatorImpl validator;
+
     @Autowired
     UserDOMapper userDOMapper;
 
@@ -39,11 +44,9 @@ public class UserServiceImpl implements UserService {
         if (userModel == null) {
             throw new BussinessException(EnumBussinessError.PARAMETER_VALIDATION_ERROR);
         }
-        if (StringUtils.isEmpty(userModel.getName())
-                || userModel.getGender() == null
-                || userModel.getAge() == null
-                || StringUtils.isEmpty(userModel.getTelephone())) {
-            throw new BussinessException(EnumBussinessError.PARAMETER_VALIDATION_ERROR);
+        ValidationResult validationResult = validator.validate(userModel);
+        if (validationResult.isHasErrors()) {
+            throw new BussinessException(EnumBussinessError.PARAMETER_VALIDATION_ERROR, validationResult.getErrorMsg());
         }
         // model转dataObject方法
         UserDO userDO = convertFromModel(userModel);
@@ -56,6 +59,24 @@ public class UserServiceImpl implements UserService {
 
         UserPasswordDO userPasswordDO = convertPasswordFromModel(userModel);
         userPasswordDOMapper.insertSelective(userPasswordDO);
+    }
+
+    @Override
+    public UserModel validateLogin(String telephone, String encryptPwd) throws BussinessException {
+        // 通过手机获取用户信息
+        UserDO userDO = userDOMapper.selectByTelephone(telephone);
+        if (userDO == null) {
+            throw new BussinessException(EnumBussinessError.USER_LOGIN_FAIL);
+        }
+
+        UserPasswordDO userPasswordDO = userPasswordDOMapper.selectByUserId(userDO.getId());
+        UserModel userModel = convertFromDataObject(userDO, userPasswordDO);
+
+        // 比对密码是否匹配
+        if (!StringUtils.equals(encryptPwd, userModel.getEncrptPassword())) {
+            throw new BussinessException(EnumBussinessError.USER_LOGIN_FAIL);
+        }
+        return userModel;
     }
 
     private UserPasswordDO convertPasswordFromModel(UserModel userModel) {

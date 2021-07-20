@@ -1,16 +1,15 @@
 package com.miaoshaproject.controller;
 
-import com.alibaba.druid.util.StringUtils;
+
 import com.miaoshaproject.controller.viewObject.UserVO;
 import com.miaoshaproject.error.BussinessException;
 import com.miaoshaproject.error.EnumBussinessError;
 import com.miaoshaproject.response.CommonReturnType;
 import com.miaoshaproject.service.UserService;
 import com.miaoshaproject.service.model.UserModel;
-import org.apache.tomcat.util.security.MD5Encoder;
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.*;
 import sun.misc.BASE64Encoder;
@@ -30,6 +29,28 @@ public class UserController extends BaseController{
 
     @Autowired
     private HttpServletRequest httpServletRequest;
+
+    // 用户登录接口
+    @RequestMapping(
+            value = "/login",
+            method = {RequestMethod.POST},
+            consumes = {CONTENT_TYPE_FORMED})
+    @ResponseBody
+    public CommonReturnType login(
+            @RequestParam(name = "telephone") String telephone,
+            @RequestParam(name = "password") String password) throws BussinessException, NoSuchAlgorithmException {
+        // 入参校验
+        if (StringUtils.isEmpty(telephone) || StringUtils.isEmpty(password)) {
+            throw new BussinessException(EnumBussinessError.PARAMETER_VALIDATION_ERROR);
+        }
+        // 校验用户登录是否合法
+        UserModel userModel = userService.validateLogin(telephone, this.encodeByMd5(password));
+
+        // 讲登录凭证加入到用户登录成功的session内（单点分布式）
+        this.httpServletRequest.getSession().setAttribute("IS_LOGIN", true);
+        this.httpServletRequest.getSession().setAttribute("LOGIN_USER", userModel);
+        return CommonReturnType.create(null);
+    }
 
     @RequestMapping(value = "/getotp", method = {RequestMethod.POST}, consumes = {CONTENT_TYPE_FORMED})
     @ResponseBody

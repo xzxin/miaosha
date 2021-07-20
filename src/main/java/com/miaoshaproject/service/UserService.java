@@ -8,4 +8,5 @@ import org.springframework.stereotype.Service;
 public interface UserService {
     UserModel getUserById(Integer id);
     void register(UserModel userModel) throws BussinessException;
+    UserModel validateLogin(String telephone, String encryptPwd) throws BussinessException;
 }
