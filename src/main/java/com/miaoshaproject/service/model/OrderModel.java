@@ -14,6 +14,17 @@ public class OrderModel {
 
     private BigDecimal orderPrice;
 
+    public Integer getPromoId() {
+        return promoId;
+    }
+
+    public void setPromoId(Integer promoId) {
+        this.promoId = promoId;
+    }
+
+    // 非空时按照秒杀商品下单
+    private Integer promoId;
+
     public BigDecimal getItemPrice() {
         return itemPrice;
     }
